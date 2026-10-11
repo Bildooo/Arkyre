@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balkón – Výpočet</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .container { max-width: 660px; width: 100%; }
+    h1 { text-align: center; margin-bottom: 24px; color: #1a1a2e; }
+    .inputs {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; margin-bottom: 20px;
+    }
+    .inputs label {
+      display: flex; flex-direction: column; align-items: center;
+      font-weight: 600; font-size: 14px;
+    }
+    .inputs input {
+      width: 140px; padding: 8px 12px; margin-top: 4px;
+      border: 2px solid #ccc; border-radius: 6px;
+      font-size: 16px; text-align: center;
+    }
+    .inputs input:focus { border-color: #4361ee; outline: none; }
+    button {
+      display: block; margin: 0 auto 28px;
+      padding: 10px 32px; font-size: 16px; font-weight: 600;
+      background: #4361ee; color: #fff; border: none; border-radius: 8px;
+      cursor: pointer; transition: background .2s;
+    }
+    button:hover { background: #3a56d4; }
+    table {
+      width: 100%; border-collapse: collapse; margin-bottom: 24px;
+      background: #fff; border-radius: 8px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    th, td { padding: 10px 14px; text-align: center; }
+    th { background: #4361ee; color: #fff; font-size: 14px; }
+    td { border-bottom: 1px solid #eee; font-size: 15px; }
+    tr:last-child td { border-bottom: none; }
+    .section-title {
+      font-size: 17px; font-weight: 700; margin: 20px 0 8px;
+      color: #1a1a2e;
+    }
+    .avg-box {
+      background: #fff; padding: 14px 20px; border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 24px;
+      font-size: 15px;
+    }
+    .avg-box strong { color: #4361ee; }
+    #results { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏗️ Balkón – Výpočet pater</h1>
+
+    <div class="inputs">
+      <label>1. patro <input type="number" id="p1" /></label>
+      <label>2. patro <input type="number" id="p2" /></label>
+      <label>3. patro <input type="number" id="p3" /></label>
+    </div>
+    <button onclick="compute()">Vypočítat</button>
+
+    <div id="results">
+      <!-- 1) Tabulka A / B -->
+      <p class="section-title">1) Hodnoty A a B pro každé patro</p>
+      <table>
+        <thead>
+          <tr><th>Patro</th><th>Vstup</th><th>Zbytek</th><th>A</th><th>B</th></tr>
+        </thead>
+        <tbody id="tblAB"></tbody>
+      </table>
+
+      <!-- 2) Průměr A -->
+      <p class="section-title">2) Průměr A (zaokrouhleno)</p>
+      <div class="avg-box" id="avgBox"></div>
+
+      <!-- 3) Nové B -->
+      <p class="section-title">3) Nové B &nbsp;(C − průměr A)</p>
+      <table>
+        <thead>
+          <tr><th>Patro</th><th>A</th><th>B</th><th>C = A + B</th><th>Průměr A</th><th>Nové B = C − průměr A</th></tr>
+        </thead>
+        <tbody id="tblNewB"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function compute() {
+      const vals = [
+        Number(document.getElementById('p1').value),
+        Number(document.getElementById('p2').value),
+        Number(document.getElementById('p3').value),
+      ];
+
+      // --- Krok 1: odečti 2×50 + 1×1155, rozděl na půl ---
+      const A = [];
+      const B = [];
+      const remainders = [];
+
+      vals.forEach(v => {
+        const zbytek = v - 2 * 50 - 1155;   // v − 100 − 1155
+        remainders.push(zbytek);
+        A.push(zbytek / 2);
+        B.push(zbytek / 2);
+      });
+
+      // Tabulka A / B
+      const tblAB = document.getElementById('tblAB');
+      tblAB.innerHTML = '';
+      for (let i = 0; i < 3; i++) {
+        tblAB.innerHTML += `<tr>
+          <td>${i + 1}. patro</td>
+          <td>${vals[i]}</td>
+          <td>${remainders[i]}</td>
+          <td>${A[i]}</td>
+          <td>${B[i]}</td>
+        </tr>`;
+      }
+
+      // --- Krok 2: průměr A, zaokrouhleno ---
+      const avgA = Math.round((A[0] + A[1] + A[2]) / 3);
+      document.getElementById('avgBox').innerHTML =
+        `A₁ = ${A[0]}, &nbsp; A₂ = ${A[1]}, &nbsp; A₃ = ${A[2]}<br>
+         Průměr = <strong>${avgA}</strong>`;
+
+      // --- Krok 3: C = A + B, nové B = C − průměr A ---
+      const tblNewB = document.getElementById('tblNewB');
+      tblNewB.innerHTML = '';
+      for (let i = 0; i < 3; i++) {
+        const C = A[i] + B[i];
+        const newB = C - avgA;
+        tblNewB.innerHTML += `<tr>
+          <td>${i + 1}. patro</td>
+          <td>${A[i]}</td>
+          <td>${B[i]}</td>
+          <td>${C}</td>
+          <td>${avgA}</td>
+          <td>${newB}</td>
+        </tr>`;
+      }
+
+      document.getElementById('results').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
