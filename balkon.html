@@ -30,6 +30,24 @@
       font-size: 16px; text-align: center;
     }
     .inputs input:focus { border-color: #4361ee; outline: none; }
+    .settings {
+      display: flex; justify-content: center; margin-bottom: 20px;
+    }
+    .settings label {
+      display: flex; flex-direction: column; align-items: center;
+      font-weight: 600; font-size: 14px;
+      background: #fff; padding: 12px 16px; border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .settings input {
+      width: 140px; padding: 8px 12px; margin-top: 4px;
+      border: 2px solid #ccc; border-radius: 6px;
+      font-size: 16px; text-align: center;
+    }
+    .settings input:focus { border-color: #4361ee; outline: none; }
+    .settings small {
+      margin-top: 6px; font-weight: 400; color: #666; font-size: 12px;
+    }
     button {
       display: block; margin: 0 auto 28px;
       padding: 10px 32px; font-size: 16px; font-weight: 600;
@@ -68,6 +86,13 @@
       <label>2. patro <input type="number" id="p2" /></label>
       <label>3. patro <input type="number" id="p3" /></label>
     </div>
+    <div class="settings">
+      <label>
+        Velikost odečtu
+        <input type="number" id="odecet" value="1155" min="0" />
+        <small>Zbytek = vstup − 100 − odečet</small>
+      </label>
+    </div>
     <button onclick="compute()">Vypočítat</button>
 
     <div id="results">
@@ -96,20 +121,41 @@
   </div>
 
   <script>
+    const ODECTET_KEY = 'balkon-odectet';
+    const ODECTET_DEFAULT = 1155;
+
+    function loadOdecet() {
+      const saved = localStorage.getItem(ODECTET_KEY);
+      const input = document.getElementById('odecet');
+      input.value = saved !== null && saved !== '' ? saved : ODECTET_DEFAULT;
+    }
+
+    function getOdecet() {
+      const input = document.getElementById('odecet');
+      const value = Number(input.value);
+      const odecet = Number.isFinite(value) ? value : ODECTET_DEFAULT;
+      localStorage.setItem(ODECTET_KEY, String(odecet));
+      return odecet;
+    }
+
+    document.getElementById('odecet').addEventListener('change', getOdecet);
+    loadOdecet();
+
     function compute() {
       const vals = [
         Number(document.getElementById('p1').value),
         Number(document.getElementById('p2').value),
         Number(document.getElementById('p3').value),
       ];
+      const odecet = getOdecet();
 
-      // --- Krok 1: odečti 2×50 + 1×1155, rozděl na půl ---
+      // --- Krok 1: odečti 2×50 + odečet, rozděl na půl ---
       const A = [];
       const B = [];
       const remainders = [];
 
       vals.forEach(v => {
-        const zbytek = v - 2 * 50 - 1155;   // v − 100 − 1155
+        const zbytek = v - 2 * 50 - odecet;   // v − 100 − odečet
         remainders.push(zbytek);
         A.push(zbytek / 2);
         B.push(zbytek / 2);
