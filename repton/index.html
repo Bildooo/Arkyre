@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repton</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div id="header">
+    <span class="title">REPTON</span>
+    <div id="level-selector">
+      <label for="level-select">Level:</label>
+      <select id="level-select" aria-label="Výběr levelu"></select>
+    </div>
+    <span class="stat">💎 <span id="diamonds">0</span> / <span id="total">0</span></span>
+  </div>
+
+  <canvas id="game" tabindex="0"></canvas>
+
+  <div id="footer">
+    Šipky / WASD = pohyb &nbsp;|&nbsp; Mezera + směr = sebrat na dálku (hlína / diamant) &nbsp;|&nbsp; R = restart
+  </div>
+
+  <div id="message"></div>
+
+  <div id="touch-controls">
+    <div class="tc-row"><button data-dir="up">▲</button></div>
+    <div class="tc-row">
+      <button data-dir="left">◀</button>
+      <button data-action="grab" id="btn-grab" style="font-size:18px;background:#2a2a00;color:#ff0;"
+        title="Drž pro sebrání předmětu">⛏️</button>
+      <button data-dir="right">▶</button>
+    </div>
+    <div class="tc-row"><button data-dir="down">▼</button></div>
+    <div class="tc-row"><button onclick="restartGame()" style="width:128px;font-size:16px;">↻ Restart</button></div>
+  </div>
+
+  <!-- Game Scripts -->
+  <script src="levels.js"></script>
+  <script src="game.js"></script>
+</body>
+
+</html>
