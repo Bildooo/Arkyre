@@ -49,7 +49,7 @@ function setupCanvas() {
   const desiredViewTiles = Math.min(17, Math.max(MAP_W, MAP_H));
   TILE_SIZE = Math.floor(Math.min(maxW, maxH) / desiredViewTiles);
   if (TILE_SIZE < 18) TILE_SIZE = 18;
-  if (TILE_SIZE > 52) TILE_SIZE = 52;
+  if (TILE_SIZE > 64) TILE_SIZE = 64;
 
   viewportTilesX = Math.min(MAP_W, Math.floor(maxW / TILE_SIZE));
   viewportTilesY = Math.min(MAP_H, Math.floor(maxH / TILE_SIZE));
@@ -58,6 +58,7 @@ function setupCanvas() {
 
   canvas.width = viewportTilesX * TILE_SIZE;
   canvas.height = viewportTilesY * TILE_SIZE;
+  ctx.imageSmoothingEnabled = false;
 }
 
 function updateCamera() {
@@ -65,6 +66,71 @@ function updateCamera() {
   const idealY = player.visualY - (viewportTilesY - 1) / 2;
   cameraX = Math.max(0, Math.min(MAP_W - viewportTilesX, idealX));
   cameraY = Math.max(0, Math.min(MAP_H - viewportTilesY, idealY));
+}
+
+// ===== SPRITE ASSET LOADING =====
+const spriteSheetImg = new Image();
+spriteSheetImg.src = 'sprites.png';
+let spritesReady = false;
+
+// Coordinates in sprites.png (exact bounding boxes avoiding divider lines)
+const SPRITE_RECTS = {
+  rock:        { x: 2,   y: 2,   w: 250, h: 250 },
+  diamond:     { x: 260, y: 2,   w: 248, h: 250 },
+  player:      { x: 516, y: 2,   w: 249, h: 250 },
+  empty:       { x: 772, y: 2,   w: 250, h: 250 },
+  wall_tl:     { x: 2,   y: 260, w: 250, h: 248 },
+  wall_t:      { x: 260, y: 260, w: 248, h: 248 },
+  wall_tr:     { x: 516, y: 260, w: 249, h: 248 },
+  wall_portal: { x: 772, y: 260, w: 250, h: 248 },
+  wall_l:      { x: 2,   y: 516, w: 250, h: 248 },
+  wall_gateway:{ x: 260, y: 516, w: 248, h: 248 },
+  wall_r:      { x: 516, y: 516, w: 249, h: 248 },
+  wall_cage:   { x: 772, y: 516, w: 250, h: 248 },
+  wall_bl:     { x: 2,   y: 772, w: 250, h: 250 },
+  wall_b:      { x: 260, y: 772, w: 248, h: 250 },
+  wall_br:     { x: 516, y: 772, w: 249, h: 250 },
+  wall:        { x: 772, y: 772, w: 250, h: 250 }
+};
+
+spriteSheetImg.onload = () => {
+  spritesReady = true;
+};
+spriteSheetImg.onerror = () => {
+  if (spriteSheetImg.src.includes('sprites.png')) {
+    spriteSheetImg.src = 'sprite sheet.jpg';
+  }
+};
+if (spriteSheetImg.complete && spriteSheetImg.naturalWidth > 0) {
+  spritesReady = true;
+}
+
+function drawSprite(name, dx, dy, dw, dh) {
+  if (!spritesReady) return false;
+  const r = SPRITE_RECTS[name];
+  if (!r) return false;
+  ctx.drawImage(spriteSheetImg, r.x, r.y, r.w, r.h, dx, dy, dw, dh);
+  return true;
+}
+
+function getWallSpriteKey(gx, gy) {
+  if (gx === undefined || gy === undefined || !grid || !grid[gy]) return 'wall';
+  const up = gy > 0 && isWall(grid[gy - 1][gx]);
+  const down = gy < MAP_H - 1 && isWall(grid[gy + 1][gx]);
+  const left = gx > 0 && isWall(grid[gy][gx - 1]);
+  const right = gx < MAP_W - 1 && isWall(grid[gy][gx + 1]);
+
+  if (!up && !left && down && right) return 'wall_tl';
+  if (!up && !right && down && left) return 'wall_tr';
+  if (!down && !left && up && right) return 'wall_bl';
+  if (!down && !right && up && left) return 'wall_br';
+
+  if (!up && down) return 'wall_t';
+  if (!down && up) return 'wall_b';
+  if (!left && right) return 'wall_l';
+  if (!right && left) return 'wall_r';
+
+  return 'wall';
 }
 
 // ===== GRAPHICS & DRAWING =====
@@ -75,7 +141,12 @@ function hash(x, y) {
 }
 
 // 1. Classic Red Brick Wall ('W')
-function drawWall(px, py, s) {
+function drawWall(px, py, s, gx, gy) {
+  if (spritesReady) {
+    const key = getWallSpriteKey(gx, gy);
+    if (drawSprite(key, px, py, s, s)) return;
+  }
+
   ctx.fillStyle = '#8B1A1A';
   ctx.fillRect(px, py, s, s);
 
@@ -99,6 +170,13 @@ function drawWall(px, py, s) {
 
 // 2. Rounded Wall corners ('1' TL, '2' TR, '3' BL, '4' BR)
 function drawRoundedWall(px, py, s, type) {
+  if (spritesReady) {
+    let key = 'wall_tl';
+    if (type === WALL_TR) key = 'wall_tr';
+    else if (type === WALL_BL) key = 'wall_bl';
+    else if (type === WALL_BR) key = 'wall_br';
+    if (drawSprite(key, px, py, s, s)) return;
+  }
   const r = Math.floor(s * 0.55);
 
   ctx.save();
@@ -158,6 +236,8 @@ function drawRoundedWall(px, py, s, type) {
 
 // 3. New Wall Type: Steel / Futuristic Metal Wall ('M')
 function drawSteelWall(px, py, s) {
+  if (spritesReady && drawSprite('wall_cage', px, py, s, s)) return;
+
   // Base plate
   ctx.fillStyle = '#374151';
   ctx.fillRect(px, py, s, s);
@@ -196,6 +276,8 @@ function drawSteelWall(px, py, s) {
 
 // 4. New Wall Type: Dark Dungeon Cobblestone / Granite Wall ('S')
 function drawStoneWall(px, py, s, gx, gy) {
+  if (spritesReady && drawSprite('wall_portal', px, py, s, s)) return;
+
   // Dark mortar background
   ctx.fillStyle = '#141414';
   ctx.fillRect(px, py, s, s);
@@ -244,6 +326,8 @@ function drawStoneWall(px, py, s, gx, gy) {
 
 // 5. New Wall Type: Golden Egyptian / Aztec Sandstone Wall ('G')
 function drawSandstoneWall(px, py, s, gx, gy) {
+  if (spritesReady && drawSprite('wall_gateway', px, py, s, s)) return;
+
   // Warm golden ochre base
   ctx.fillStyle = '#C28827';
   ctx.fillRect(px, py, s, s);
@@ -315,6 +399,8 @@ function drawEarth(px, py, s, gx, gy) {
 
 // 7. Diamond ('D')
 function drawDiamond(px, py, s) {
+  if (spritesReady && drawSprite('diamond', px, py, s, s)) return;
+
   const cx = px + s / 2;
   const cy = py + s / 2;
   const r = s * 0.35;
@@ -346,6 +432,8 @@ function drawDiamond(px, py, s) {
 
 // 8. Boulder / Rock ('R')
 function drawRock(px, py, s) {
+  if (spritesReady && drawSprite('rock', px, py, s, s)) return;
+
   const cx = px + s / 2;
   const cy = py + s / 2;
   const r = s * 0.42;
@@ -378,6 +466,20 @@ function drawRock(px, py, s) {
 
 // 9. Player character (Repton)
 function drawPlayer(px, py, s, facing = 'down', isMoving = false, walkCycle = 0) {
+  if (spritesReady) {
+    const bob = isMoving ? Math.sin(walkCycle * 2) * (s * 0.05) : 0;
+    ctx.save();
+    if (facing === 'left') {
+      ctx.translate(px + s, py);
+      ctx.scale(-1, 1);
+      drawSprite('player', 0, bob, s, s);
+    } else {
+      drawSprite('player', px, py + bob, s, s);
+    }
+    ctx.restore();
+    return;
+  }
+
   const cx = px + s / 2;
   const headR = s * 0.18;
 
@@ -427,6 +529,7 @@ function drawPlayer(px, py, s, facing = 'down', isMoving = false, walkCycle = 0)
 function render() {
   updateCamera();
 
+  ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -446,7 +549,7 @@ function render() {
           drawEarth(px, py, TILE_SIZE, gx, gy);
           break;
         case WALL:
-          drawWall(px, py, TILE_SIZE);
+          drawWall(px, py, TILE_SIZE, gx, gy);
           break;
         case WALL_TL:
         case WALL_TR:
@@ -1081,7 +1184,7 @@ function triggerWin() {
     btnHtml = '<button class="btn-action" onclick="loadLevel(0)">Hrát znovu od 1. levelu ↻</button>';
   }
 
-  showMessage(`VÍTĚZSTVÍ! 🏆<div class="sub">Level dokončen!${btnHtml}</div>`, 'win');
+  showMessage(`VÍTĚZSTVÍ! 🏆<div class="sub">Level dokončen!${btnHtml}<div style="margin-top:6px;font-size:14px;color:#aaa;">(stiskni Enter nebo Mezerník)</div></div>`, 'win');
 }
 
 function showMessage(htmlContent, type) {
@@ -1207,6 +1310,24 @@ window.addEventListener('keydown', (e) => {
       canvas.focus();
     }
     return;
+  }
+
+  // Next level on Enter or Space when level is completed
+  if (gameState === 'won') {
+    if (e.key === 'Enter' || e.code === 'Enter' || e.key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      nextLevel();
+      return;
+    }
+  }
+
+  // Quick retry on Enter or Space when dead
+  if (gameState === 'dead') {
+    if (e.key === 'Enter' || e.code === 'Enter' || e.key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      restartGame();
+      return;
+    }
   }
 
   if (e.key === 'r' || e.key === 'R') {

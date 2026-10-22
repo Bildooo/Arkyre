@@ -28,9 +28,11 @@ const CHAR_MAP = {
   'R': ROCK,
   'P': EMPTY,
   'Q': WALL_TL,
+  '1': WALL_TL,
   '[': WALL_TL,
   '/': WALL_TL,
   'E': WALL_TR,
+  '2': WALL_TR,
   ']': WALL_TR,
   '\\': WALL_TR,
   '3': WALL_BL,
@@ -50,15 +52,15 @@ const LEVELS = [
   {
     id: 1,
     name: "1. Tréninková komora (Malý level)",
-    width: 6,
+    width: 7,
     height: 6,
     map: [
-      'WWWWWW', //  0
-      'WWRWWW', //  0
-      'W.P..W', //  0
-      'W.D..W', //  0
-      'W.D..W', //  0
-      'WWWWWW', //  0
+      'WWWWWWW', //  0
+      'WWWRWWW', //  0
+      'WDDPDDW', //  0
+      'W..R..W', //  0
+      'W.RRR.W', //  0
+      'WWWWWWW', //  0
     ]
   },
   {
@@ -82,41 +84,46 @@ const LEVELS = [
   {
     id: 3,
     name: "3. Repton — Originální mapa (32x32)",
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 50,
     map: [
-      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0 - Horní zeď
-      'WWWWWWWWWEEEE..REEEWWEE.D.EWWWWW', //  1
-      'WWWWWWEEEEEE...EE..EE...EE.EWWWW', //  2
-      'WWWWEE..RR...1WW2EE...E.D.EEWWWW', //  3 - Skála a diamanty nahoře
-      'WWWEE...RRR..3WW4.1WW2...E.EWWWW', //  4
-      'WWWEPE.RRRR.......3WW4..E.D.EWWW', //  5 - Hráč P na (4, 5)
-      'WWEE...RRRR...1W2...EE....E.EWWW', //  6 - Shluk kamenů
-      'WWEE....RR...1WWWW2...1W2..E.WWW', //  7
-      'WWE..1WW2...E3WWWW4..1WWW2..EWWW', //  8 - Zaoblené rohy
-      'WW.R.3WW4.E...1WW2...3WWW4..EWWW', //  9
-      'WW1W2.....1W2.3WW4....1W2..D.WWW', // 10
-      'WW3W4..D..3W4.....1W2.3W4.WWWWWW', // 11
-      'WWMM..E....EE..R..3W4.1W2.E.RWWW', // 12 - Kovové zdi (M)
-      'WWMM..1WW2..1WWWW2....3W4.WWWWWW', // 13
-      'WWD1WWWWWWWWWWWWWWWW2.....WWWWWW', // 14 - Zvlněná centrální zeď
-      'WWWWWWWWWWWWWWWWWWWW4..D..WWWWWW', // 15
-      'WWEE..E...E...E.....1WWWWWWEEWWW', // 16
-      'WWE.R...R...RRRRRR..3WWWW4EEEWWW', // 17 - Řada kamenů RRRRRR
-      'WWEE..R...E.....R.R.EE..1WWEEWWW', // 18
-      'WWEEE...E..1WWWW2.R.EE..3WW2EWWW', // 19
-      'WWEE.D..E..3WWWW4...EE....1W2WWW', // 20 - Diamant
-      'WWSSSEEE..1WWWWWW2.D.EE...3W4WWW', // 21 - Kamenné zdi (S)
-      'WWSSSEEE..3WWWWWW4EE.EE....1WWWW', // 22
-      'WWEE.D.EE...1WW2....EE.....3WWWW', // 23
-      'WWEE..EE.R..3WW4.R.EE...1W2.EWWW', // 24
-      'WWEEE..1WW2.....1WW2.D..3W4.EWWW', // 25
-      'WWEE.D.3WW4..R..3WW4..1W2...EWWW', // 26
-      'WWGGGEEE....1W2......1WW4..E.WWW', // 27 - Pískovcové zdi (G)
-      'WWGGGE.R....3WWWWWW2.3WW2..E.WWW', // 28
-      'WWEEE..1WW2.1WWWWWW4..3W4.D.EWWW', // 29
-      'WWWWEE.3WW4.3WWWWWW4....1WW2EWWW', // 30
-      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW'  // 31 - Spodní zeď
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0 - Horní zeď
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0 - Horní zeď
+      'WWWWWWWWWWZZZZZZRZZZDZZZZZWWWWWWWWWW', //  0 - Horní zeď
+      'WWWWWWWZZZZZZWWZ12ZZZZZZZZZZZWWWWWWW', //  0 - Horní zeď
+      'WWWWWZZZZZWZZWWWWWZZZZZDZZZZZZZWWWWW', //  0 - Horní zeď
+      'WWWWZZZZZWWWZWWWZZZWWZZZZZDZZZZZWWWW', //  0 - Horní zeď
+      'WWWWZZPZWWWWZWWZZZZWWZZZZZZZZZZZWWWW', //  0 - Horní zeď
+      'WWWZZZZZZZZWZWWZZZZZZWWZZZZZDZZZZWWW', //  0 - Horní zeď
+      'WWWZZZZZZZWRZWWWWZZZZWWZWWZZZZZZZWWW', //  0 - Horní zeď
+      'WWWZZZZZZWW2ZZZWWWZZZZZWWWWZZZZZDWWW', //  0 - Horní zeď
+      'WWZZZZZZWZWWWWZDWWWZZZZWWWWZZZZZZZWw', //  0 - Horní zeď
+      'WWZR12ZWZZZWW4ZZZWWZZZZZ34Z4ZZZZZZWW', //  0 - Horní zeď
+      'WWZRWWZWZZZWW4ZZZWWZZZZZ34Z12ZZZZZWW', //  0 - Horní zeď
+      'WWZZWWWDZZZ34ZZZZ34ZZDZZZZZ34ZDWWWWW', //  0 - Horní zeď
+      'WW2Z34ZWZZZZZZZZZZZWZZZZZ12ZZZZ3WWWW', //  0 - Horní zeď
+      'WW4ZZZZZWZZZZZ12ZZ1W2ZZZZ34ZZZZR..WW', //  0 - Horní zeď
+      'WWZZZZZZZZZZZDWW2ZWW4ZZZZZWZZZ1W2.WW', //  0 - Horní zeď
+      'WWDZ12ZZ12ZZ1WDW4DWWZZZZZZWWZZWWW.WW', //  0 - Horní zeď
+      'WWWWWWWWWWWWWWZZZWWWZWWZZ1WWWWD...WW', //  0 - Horní zeď
+      'WWWWDZ34ZZ34ZZZZZ3W4Z34ZZW4D34...1WW', //  0 - Horní zeď
+      'WWZZZZZZZZZZZZZZZZZZZZZWW4ZZZ...1WWW', //  0 - Horní zeď
+      'WWZZZZZRZZZZZZRRRRRRZZZW4ZZZ...1WWWW', //  0 - Horní zeď
+      'WWZZZZZZZZRZZZZZZZZZRZRWZZZ...14.WWW', //  0 - Horní zeď
+      'WWZZRZZZZZZZZZZZZZZZRZZWZZ...14..DWW', //  0 - Horní zeď
+      'WWZZZZZRZZZZZZZWWWWWWWZWDZ..14ZZZZWW', //  0 - Horní zeď
+      'WWZZZZZZZZWWWWWRWWWWWRWWZ..14ZZZZZWW', //  0 - Horní zeď
+      'WWDZZZZZZZZWRWZZZZZZZZDWZ.1W..WW..WW', //  0 - Horní zeď
+      'WWWWWWWWWWZZZZZWZZZZZZZWZ.34D.34.WWW', //  0 - Horní zeď
+      'WWWZZDZZZWWWWWWWZZZZZZZWZ...12...WWW', //  0 - Horní zeď
+      'WWWZZZZZZZWWWWWWRZZZZWWZZ...34...WWW', //  0 - Horní zeď
+      'WWWWZZZZWZZWRWZZZZZZWZZZZ.......WWWW', //  0 - Horní zeď
+      'WWWWDZZZWZZZZZZWZZZWZZZZZ.......WWWW', //  0 - Horní zeď      
+      'WWWWWZZZWZWWWWWWWWWZZZZ12.12...WWWWW', //  0 - Horní zeď
+      'WWWWWWWZZZZWRWZZZZZZZZZWW.WW.WWWWWWW', //  0 - Horní zeď
+      'WWWWWWWWWWZZZZZ12ZZZZZZWWDWWWWWWWWWW', //  0 - Horní zeď
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0 - Horní zeď
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0 - Horní zeď
     ]
   }
 ];
