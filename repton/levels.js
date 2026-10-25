@@ -56,10 +56,8 @@ const LEVELS = [
     height: 6,
     map: [
       'WWWWWWW', //  0
-      'WWWRWWW', //  0
-      'WDDPDDW', //  0
-      'W..R..W', //  0
-      'W.RRR.W', //  0
+      'W..P..W', //  0
+      'WD....W', //  0
       'WWWWWWW', //  0
     ]
   },
@@ -70,14 +68,9 @@ const LEVELS = [
     height: 10,
     map: [
       'WWWWWWWWWW', //  0
-      'WZZZZZZZZW', //  0
-      'WZDZZPZZDW', //  0
-      'WZZZZZZZZW', //  0
-      'WZZZZZZZZW', //  0
-      'WZZZZZZZZW', //  0
-      'WZZZZZZZZW', //  0
-      'WZZZZZZZZW', //  0
-      'WZZZZZZZZW', //  0
+      'WD..RPZZZW', //  0
+      'W..1WWWWWW', //  0      
+      'W.1WWWWWWW', //  0      
       'WWWWWWWWWW', //  0      
     ]
   },
