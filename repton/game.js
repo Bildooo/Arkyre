@@ -21,9 +21,11 @@ let player = {
   walkCycle: 0
 };
 
-let pushedRock = null; // { fromX, fromY, toX, toY, progress }
-const fallingRocks = new Set(); // tracks rocks currently mid-fall: "x,y"
+let pushedRock = null; // { fromX, fromY, toX, toY, progress, type }
+const fallingRocks = new Set(); // tracks rocks and eggs currently mid-fall: "x,y"
 let physicsTimer = 0;
+let monsters = []; // active monsters hatched from eggs
+let eggCrackParticles = []; // visual particles when egg hatches
 
 let score = 0;
 let totalDiamonds = 0;
@@ -464,6 +466,362 @@ function drawRock(px, py, s) {
   ctx.fill();
 }
 
+// 8b. Egg / White Stone ('O')
+function drawEgg(px, py, s) {
+  const cx = px + s / 2;
+  const cy = py + s / 2 + s * 0.04;
+  const rx = s * 0.33;
+  const ry = s * 0.41;
+
+  ctx.save();
+
+  // Drop shadow
+  ctx.beginPath();
+  ctx.ellipse(cx, py + s * 0.86, rx * 0.85, s * 0.08, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.fill();
+
+  // 3D Egg shape using bezier curves
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - ry);
+  ctx.bezierCurveTo(cx + rx * 0.9, cy - ry * 0.85, cx + rx * 1.15, cy + ry * 0.35, cx + rx * 0.8, cy + ry * 0.85);
+  ctx.bezierCurveTo(cx + rx * 0.5, cy + ry * 1.05, cx - rx * 0.5, cy + ry * 1.05, cx - rx * 0.8, cy + ry * 0.85);
+  ctx.bezierCurveTo(cx - rx * 1.15, cy + ry * 0.35, cx - rx * 0.9, cy - ry * 0.85, cx, cy - ry);
+  ctx.closePath();
+
+  // Gradient fill (pearl / ivory white with subtle 3D lighting)
+  const grad = ctx.createRadialGradient(
+    cx - rx * 0.35, cy - ry * 0.35, rx * 0.1,
+    cx, cy, ry * 1.1
+  );
+  grad.addColorStop(0, '#FFFFFF');
+  grad.addColorStop(0.35, '#F7F6EE');
+  grad.addColorStop(0.7, '#DED6C4');
+  grad.addColorStop(1, '#968C76');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Shell outline
+  ctx.strokeStyle = '#5E5440';
+  ctx.lineWidth = Math.max(1, s * 0.035);
+  ctx.stroke();
+
+  // Glossy highlight
+  ctx.beginPath();
+  ctx.ellipse(cx - rx * 0.32, cy - ry * 0.38, rx * 0.22, ry * 0.14, -Math.PI / 5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// 8c. Enemy / Monster
+function drawMonster(px, py, s, monster) {
+  const cx = px + s / 2;
+  const cy = py + s / 2;
+  const r = s * 0.36;
+  const tick = performance.now() * 0.008;
+
+  ctx.save();
+
+  // Monster shadow
+  ctx.beginPath();
+  ctx.ellipse(cx, py + s * 0.88, r * 0.9, s * 0.08, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.fill();
+
+  // Animated twitching legs (6 legs)
+  ctx.strokeStyle = '#7B1FA2';
+  ctx.lineWidth = Math.max(2, s * 0.06);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 5) * Math.PI - Math.PI / 2;
+    const legWiggle = Math.sin(tick * 3 + i * 1.3) * (s * 0.08);
+    const lx1 = cx + Math.cos(angle) * (r * 0.7);
+    const ly1 = cy + Math.sin(angle) * (r * 0.7);
+    const lx2 = cx + Math.cos(angle) * (r * 1.25) + legWiggle;
+    const ly2 = cy + Math.sin(angle) * (r * 1.25) + Math.abs(legWiggle);
+    ctx.beginPath();
+    ctx.moveTo(lx1, ly1);
+    ctx.lineTo(lx2, ly2);
+    ctx.stroke();
+  }
+
+  // Pulsing body (deep alien purple / venomous magenta)
+  const pulse = Math.sin(tick * 2) * (s * 0.02);
+  const bodyGrad = ctx.createRadialGradient(
+    cx - r * 0.25, cy - r * 0.25, r * 0.1,
+    cx, cy, r + pulse
+  );
+  bodyGrad.addColorStop(0, '#E040FB');
+  bodyGrad.addColorStop(0.4, '#AA00FF');
+  bodyGrad.addColorStop(0.85, '#4A148C');
+  bodyGrad.addColorStop(1, '#1A0033');
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + pulse, 0, Math.PI * 2);
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+  ctx.strokeStyle = '#EA80FC';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Menacing glowing eyes
+  let eyeDx = 0, eyeDy = 0;
+  if (monster.facing === 'left') eyeDx = -s * 0.08;
+  else if (monster.facing === 'right') eyeDx = s * 0.08;
+  else if (monster.facing === 'up') eyeDy = -s * 0.08;
+  else if (monster.facing === 'down') eyeDy = s * 0.08;
+
+  const eyeY = cy - r * 0.15 + eyeDy;
+  const eyeR = s * 0.10;
+  const eyeSpread = s * 0.13;
+
+  // Left Eye
+  ctx.beginPath();
+  ctx.arc(cx - eyeSpread + eyeDx, eyeY, eyeR, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFEA00';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx - eyeSpread + eyeDx + (eyeDx * 0.4), eyeY + (eyeDy * 0.4), eyeR * 0.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#D50000';
+  ctx.fill();
+
+  // Right Eye
+  ctx.beginPath();
+  ctx.arc(cx + eyeSpread + eyeDx, eyeY, eyeR, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFEA00';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx + eyeSpread + eyeDx + (eyeDx * 0.4), eyeY + (eyeDy * 0.4), eyeR * 0.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#D50000';
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// Particle effects when egg breaks
+function createEggCrackEffect(gx, gy) {
+  for (let i = 0; i < 16; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.2 + Math.random() * 3.8;
+    eggCrackParticles.push({
+      x: gx + 0.5,
+      y: gy + 0.5,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.5,
+      size: 2 + Math.random() * 4,
+      color: Math.random() > 0.4 ? '#FFFFFF' : '#E8E4D8',
+      life: 0.55
+    });
+  }
+}
+
+function updateAndRenderParticles(dt) {
+  for (let i = eggCrackParticles.length - 1; i >= 0; i--) {
+    const p = eggCrackParticles[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 8 * dt; // gravity
+    p.life -= dt;
+    if (p.life <= 0) {
+      eggCrackParticles.splice(i, 1);
+      continue;
+    }
+    const px = (p.x - cameraX) * TILE_SIZE;
+    const py = (p.y - cameraY) * TILE_SIZE;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(px, py, p.size, p.size);
+  }
+}
+
+// 8d. Golden Key ('K')
+function drawKey(px, py, s) {
+  const cx = px + s / 2;
+  const cy = py + s / 2;
+
+  ctx.save();
+
+  // Subtle floating shadow
+  ctx.beginPath();
+  ctx.ellipse(cx, py + s * 0.78, s * 0.38, s * 0.09, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.fill();
+
+  // Golden metallic key lying horizontally
+  const bowX = cx - s * 0.20;
+  const bowY = cy;
+  const outerR = s * 0.20;
+  const innerR = s * 0.10;
+
+  const goldGrad = ctx.createLinearGradient(px, py, px + s, py + s);
+  goldGrad.addColorStop(0, '#FFF59D');
+  goldGrad.addColorStop(0.3, '#FFD700');
+  goldGrad.addColorStop(0.7, '#FFA000');
+  goldGrad.addColorStop(1, '#FF6F00');
+
+  // Key Bow
+  ctx.beginPath();
+  ctx.arc(bowX, bowY, outerR, 0, Math.PI * 2);
+  ctx.arc(bowX, bowY, innerR, 0, Math.PI * 2, true);
+  ctx.fillStyle = goldGrad;
+  ctx.fill();
+
+  ctx.strokeStyle = '#B78103';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Collar between bow and shaft
+  ctx.fillStyle = '#FFE082';
+  ctx.fillRect(bowX + outerR - 1, cy - s * 0.08, s * 0.06, s * 0.16);
+
+  // Key shaft extending to the right
+  const shaftX = bowX + outerR + s * 0.04;
+  const shaftW = s * 0.38;
+  const shaftH = Math.max(3, s * 0.09);
+  const shaftY = cy - shaftH / 2;
+
+  ctx.fillStyle = goldGrad;
+  ctx.fillRect(shaftX, shaftY, shaftW, shaftH);
+  ctx.strokeStyle = '#B78103';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(shaftX, shaftY, shaftW, shaftH);
+
+  // Key teeth pointing downward
+  const bitX1 = shaftX + shaftW - s * 0.16;
+  const bitX2 = shaftX + shaftW - s * 0.06;
+  const bitW = Math.max(2, s * 0.06);
+  const bitH1 = s * 0.16;
+  const bitH2 = s * 0.12;
+
+  ctx.fillRect(bitX1, shaftY + shaftH - 1, bitW, bitH1);
+  ctx.strokeRect(bitX1, shaftY + shaftH - 1, bitW, bitH1);
+
+  ctx.fillRect(bitX2, shaftY + shaftH - 1, bitW, bitH2);
+  ctx.strokeRect(bitX2, shaftY + shaftH - 1, bitW, bitH2);
+
+  // Shiny highlight along the shaft
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.fillRect(shaftX + 2, shaftY + 1, shaftW - 4, 1.2);
+
+  ctx.restore();
+}
+
+// 8e. Blue Locked Wall / Safe ('B')
+function drawSafe(px, py, s) {
+  ctx.save();
+
+  // Dark steel outer border
+  ctx.fillStyle = '#0F172A';
+  ctx.fillRect(px, py, s, s);
+
+  // Blue metallic plate
+  const bevel = Math.max(2, Math.floor(s * 0.08));
+  ctx.fillStyle = '#1E3A8A';
+  ctx.fillRect(px + bevel, py + bevel, s - bevel * 2, s - bevel * 2);
+
+  // Cyan-blue metallic bevel highlights
+  ctx.fillStyle = '#60A5FA';
+  ctx.fillRect(px, py, s, bevel); // Top highlight
+  ctx.fillRect(px, py, bevel, s); // Left highlight
+  ctx.fillStyle = '#091E42';
+  ctx.fillRect(px, py + s - bevel, s, bevel); // Bottom shadow
+  ctx.fillRect(px + s - bevel, py, bevel, s); // Right shadow
+
+  // Recessed inner door panel
+  const inset = Math.max(4, Math.floor(s * 0.16));
+  const innerW = s - inset * 2;
+  const innerH = s - inset * 2;
+  const doorGrad = ctx.createLinearGradient(px + inset, py + inset, px + s - inset, py + s - inset);
+  doorGrad.addColorStop(0, '#2563EB');
+  doorGrad.addColorStop(0.5, '#1D4ED8');
+  doorGrad.addColorStop(1, '#1E3A8A');
+  ctx.fillStyle = doorGrad;
+  ctx.fillRect(px + inset, py + inset, innerW, innerH);
+
+  // Vault inner border
+  ctx.strokeStyle = '#172554';
+  ctx.lineWidth = Math.max(1, s * 0.04);
+  ctx.strokeRect(px + inset, py + inset, innerW, innerH);
+
+  // 4 Corner Rivets
+  const boltSize = Math.max(2, Math.floor(s * 0.07));
+  const bOff = Math.max(2, Math.floor(s * 0.09));
+  ctx.fillStyle = '#E2E8F0';
+  ctx.fillRect(px + bOff, py + bOff, boltSize, boltSize);
+  ctx.fillRect(px + s - bOff - boltSize, py + bOff, boltSize, boltSize);
+  ctx.fillRect(px + bOff, py + s - bOff - boltSize, boltSize, boltSize);
+  ctx.fillRect(px + s - bOff - boltSize, py + s - bOff - boltSize, boltSize, boltSize);
+
+  // Center combination lock / keyhole vault dial
+  const cx = px + s / 2;
+  const cy = py + s / 2;
+  const dialR = s * 0.20;
+
+  // Dial outer ring (metallic silver)
+  ctx.beginPath();
+  ctx.arc(cx, cy, dialR, 0, Math.PI * 2);
+  ctx.fillStyle = '#94A3B8';
+  ctx.fill();
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Dial inner circle (brass gold)
+  ctx.beginPath();
+  ctx.arc(cx, cy, dialR * 0.65, 0, Math.PI * 2);
+  ctx.fillStyle = '#F59E0B';
+  ctx.fill();
+
+  // Keyhole
+  ctx.fillStyle = '#0F172A';
+  ctx.beginPath();
+  ctx.arc(cx, cy - dialR * 0.15, dialR * 0.22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx - dialR * 0.12, cy - dialR * 0.1);
+  ctx.lineTo(cx + dialR * 0.12, cy - dialR * 0.1);
+  ctx.lineTo(cx + dialR * 0.18, cy + dialR * 0.35);
+  ctx.lineTo(cx - dialR * 0.18, cy + dialR * 0.35);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// Particle burst when safe unlocks and turns into diamond
+function createSafeUnlockEffect(gx, gy) {
+  const colors = ['#67E8F9', '#38BDF8', '#FDE047', '#FFFFFF', '#60A5FA', '#F59E0B'];
+  for (let i = 0; i < 22; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.0 + Math.random() * 4.5;
+    eggCrackParticles.push({
+      x: gx + 0.5,
+      y: gy + 0.5,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.2,
+      size: 2 + Math.random() * 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 0.65
+    });
+  }
+}
+
+// Unlock all safes across the map into diamonds
+function unlockSafes() {
+  let count = 0;
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      if (grid[y][x] === SAFE) {
+        grid[y][x] = DIAMOND;
+        createSafeUnlockEffect(x, y);
+        count++;
+      }
+    }
+  }
+  playUnlockSound();
+}
+
 // 9. Player character (Repton)
 function drawPlayer(px, py, s, facing = 'down', isMoving = false, walkCycle = 0) {
   if (spritesReady) {
@@ -572,18 +930,41 @@ function render() {
         case ROCK:
           drawRock(px, py, TILE_SIZE);
           break;
+        case EGG:
+          drawEgg(px, py, TILE_SIZE);
+          break;
+        case KEY:
+          drawKey(px, py, TILE_SIZE);
+          break;
+        case SAFE:
+          drawSafe(px, py, TILE_SIZE);
+          break;
       }
     }
   }
 
-  // Render pushed rock sliding smoothly
+  // Render pushed rock or egg sliding smoothly
   if (pushedRock) {
     const rx = pushedRock.fromX + (pushedRock.toX - pushedRock.fromX) * pushedRock.progress;
     const ry = pushedRock.fromY + (pushedRock.toY - pushedRock.fromY) * pushedRock.progress;
     const rpx = (rx - cameraX) * TILE_SIZE;
     const rpy = (ry - cameraY) * TILE_SIZE;
-    drawRock(rpx, rpy, TILE_SIZE);
+    if (pushedRock.type === EGG) {
+      drawEgg(rpx, rpy, TILE_SIZE);
+    } else {
+      drawRock(rpx, rpy, TILE_SIZE);
+    }
   }
+
+  // Render active monsters
+  for (const m of monsters) {
+    const mpx = (m.visualX - cameraX) * TILE_SIZE;
+    const mpy = (m.visualY - cameraY) * TILE_SIZE;
+    drawMonster(mpx, mpy, TILE_SIZE, m);
+  }
+
+  // Render egg crack particles
+  updateAndRenderParticles(0.016);
 
   // Render player
   if (gameState !== 'dead') {
@@ -740,6 +1121,239 @@ function playWinSound() {
   } catch (e) { }
 }
 
+function playEggCrackSound() {
+  try {
+    const actx = getAudioCtx();
+    const now = actx.currentTime;
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(820, now);
+    osc.frequency.exponentialRampToValueAtTime(140, now + 0.12);
+    gain.gain.setValueAtTime(0.24, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.connect(gain);
+    gain.connect(actx.destination);
+    osc.start(now);
+    osc.stop(now + 0.12);
+  } catch (e) { }
+}
+
+function playMonsterSquishSound() {
+  try {
+    const actx = getAudioCtx();
+    const now = actx.currentTime;
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(340, now);
+    osc.frequency.exponentialRampToValueAtTime(55, now + 0.18);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc.connect(gain);
+    gain.connect(actx.destination);
+    osc.start(now);
+    osc.stop(now + 0.18);
+  } catch (e) { }
+}
+
+function playUnlockSound() {
+  try {
+    const actx = getAudioCtx();
+    const now = actx.currentTime;
+
+    // Mechanical click 1
+    const click1 = actx.createOscillator();
+    const gClick1 = actx.createGain();
+    click1.type = 'square';
+    click1.frequency.setValueAtTime(1400, now);
+    click1.frequency.exponentialRampToValueAtTime(300, now + 0.03);
+    gClick1.gain.setValueAtTime(0.18, now);
+    gClick1.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+    click1.connect(gClick1);
+    gClick1.connect(actx.destination);
+    click1.start(now);
+    click1.stop(now + 0.03);
+
+    // Mechanical click 2
+    const click2 = actx.createOscillator();
+    const gClick2 = actx.createGain();
+    click2.type = 'square';
+    click2.frequency.setValueAtTime(1800, now + 0.06);
+    click2.frequency.exponentialRampToValueAtTime(400, now + 0.09);
+    gClick2.gain.setValueAtTime(0.2, now + 0.06);
+    gClick2.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    click2.connect(gClick2);
+    gClick2.connect(actx.destination);
+    click2.start(now + 0.06);
+    click2.stop(now + 0.09);
+
+    // Ascending celebratory chime
+    const notes = [698.46, 880.00, 1046.50, 1318.51];
+    notes.forEach((freq, idx) => {
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      const t = now + 0.11 + idx * 0.07;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.connect(gain);
+      gain.connect(actx.destination);
+      osc.start(t);
+      osc.stop(t + 0.35);
+    });
+  } catch (e) { }
+}
+
+// ===== MONSTER AI & PATHFINDING =====
+const MONSTER_MOVE_DURATION = 0.22; // ~4.5 tiles/sec, smooth pursuit
+const MONSTER_STEP_INTERVAL = 0.28; // time between steps
+
+function spawnMonster(x, y) {
+  monsters.push({
+    id: Date.now() + Math.random(),
+    x,
+    y,
+    visualX: x,
+    visualY: y,
+    startX: x,
+    startY: y,
+    targetX: x,
+    targetY: y,
+    isMoving: false,
+    moveProgress: 0,
+    facing: 'down',
+    cooldown: 0.25
+  });
+}
+
+function findMonsterPath(fromX, fromY, toX, toY) {
+  if (Math.abs(fromX - toX) + Math.abs(fromY - toY) === 1) {
+    return { dx: toX - fromX, dy: toY - fromY };
+  }
+
+  const queue = [{ x: fromX, y: fromY, path: [] }];
+  const visited = new Set([`${fromX},${fromY}`]);
+  const maxDepth = 45;
+
+  const dirs = [
+    { dx: 0, dy: -1 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 }
+  ];
+
+  while (queue.length > 0) {
+    const curr = queue.shift();
+    if (curr.path.length >= maxDepth) break;
+
+    for (const d of dirs) {
+      const nx = curr.x + d.dx;
+      const ny = curr.y + d.dy;
+      const key = `${nx},${ny}`;
+
+      if (nx === toX && ny === toY) {
+        return curr.path.length > 0 ? curr.path[0] : d;
+      }
+
+      if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && !visited.has(key)) {
+        visited.add(key);
+        // Monsters can ONLY walk through EMPTY cells!
+        if (grid[ny][nx] === EMPTY) {
+          queue.push({
+            x: nx,
+            y: ny,
+            path: curr.path.length === 0 ? [d] : curr.path
+          });
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function updateMonsters(dt) {
+  if (gameState !== 'playing') return;
+
+  for (let i = monsters.length - 1; i >= 0; i--) {
+    const m = monsters[i];
+
+    if (m.isMoving) {
+      m.moveProgress += dt / MONSTER_MOVE_DURATION;
+      if (m.moveProgress >= 1) {
+        m.moveProgress = 1;
+        m.x = m.targetX;
+        m.y = m.targetY;
+        m.visualX = m.x;
+        m.visualY = m.y;
+        m.isMoving = false;
+        m.cooldown = MONSTER_STEP_INTERVAL;
+
+        if (player.x === m.x && player.y === m.y) {
+          gameState = 'dead';
+          playDeathSound();
+          showMessage('ROZTRHÁN PŘÍŠEROU! 👾', 'lose');
+          return;
+        }
+      } else {
+        m.visualX = m.startX + (m.targetX - m.startX) * m.moveProgress;
+        m.visualY = m.startY + (m.targetY - m.startY) * m.moveProgress;
+
+        const dist = Math.hypot(m.visualX - player.visualX, m.visualY - player.visualY);
+        if (dist < 0.55) {
+          gameState = 'dead';
+          playDeathSound();
+          showMessage('ROZTRHÁN PŘÍŠEROU! 👾', 'lose');
+          return;
+        }
+      }
+    } else {
+      m.cooldown = (m.cooldown || 0) - dt;
+      if (m.cooldown <= 0) {
+        // Path towards player through EMPTY cells
+        let step = findMonsterPath(m.x, m.y, player.x, player.y);
+
+        // If no direct path to player, wander among adjacent EMPTY cells
+        if (!step) {
+          const emptyNeighbors = [];
+          const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+          for (const d of dirs) {
+            const nx = m.x + d.dx;
+            const ny = m.y + d.dy;
+            if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && grid[ny][nx] === EMPTY) {
+              const occupied = monsters.some(other => other !== m && ((other.x === nx && other.y === ny) || (other.isMoving && other.targetX === nx && other.targetY === ny)));
+              if (!occupied) emptyNeighbors.push(d);
+            }
+          }
+          if (emptyNeighbors.length > 0) {
+            step = emptyNeighbors[Math.floor(Math.random() * emptyNeighbors.length)];
+          }
+        }
+
+        if (step) {
+          const nx = m.x + step.dx;
+          const ny = m.y + step.dy;
+          const occupied = monsters.some(other => other !== m && ((other.x === nx && other.y === ny) || (other.isMoving && other.targetX === nx && other.targetY === ny)));
+          if (!occupied && grid[ny][nx] === EMPTY) {
+            m.isMoving = true;
+            m.moveProgress = 0;
+            m.startX = m.x;
+            m.startY = m.y;
+            m.targetX = nx;
+            m.targetY = ny;
+            if (step.dx === 1) m.facing = 'right';
+            else if (step.dx === -1) m.facing = 'left';
+            else if (step.dy === 1) m.facing = 'down';
+            else if (step.dy === -1) m.facing = 'up';
+          }
+        }
+      }
+    }
+  }
+}
+
 // ===== PHYSICS ENGINE =====
 function doPhysics() {
   if (gameState !== 'playing') return;
@@ -747,53 +1361,64 @@ function doPhysics() {
   const newFalling = new Set();
   let rockLanded = false;
 
-  // Process rocks bottom-to-top, left-to-right
+  // Process rocks and eggs bottom-to-top, left-to-right
   for (let y = MAP_H - 2; y >= 0; y--) {
     for (let x = 0; x < MAP_W; x++) {
-      if (grid[y][x] !== ROCK) continue;
+      const item = grid[y][x];
+      if (item !== ROCK && item !== EGG) continue;
 
       const key = `${x},${y}`;
       const isAlreadyFalling = fallingRocks.has(key);
 
       if (y + 1 < MAP_H) {
         const below = grid[y + 1][x];
+        const monsterBelowIdx = monsters.findIndex(m => m.x === x && m.y === y + 1);
 
         if (below === EMPTY) {
-          // Check if player is directly underneath this rock
+          // Check if player is directly underneath this rock/egg
           const isPlayerUnder = (player.x === x && player.y === y + 1);
           const isPlayerMovingInto = (player.isMoving && player.targetX === x && player.targetY === y + 1);
           const isPlayerMovingAway = (player.isMoving && player.startX === x && player.startY === y + 1 && player.targetX !== x);
 
           if (isPlayerUnder || isPlayerMovingInto) {
             if (isPlayerMovingAway) {
-              // Player is stepping away horizontally -> rock drops safely behind player
-              grid[y + 1][x] = ROCK;
+              grid[y + 1][x] = item;
               grid[y][x] = EMPTY;
               newFalling.add(`${x},${y + 1}`);
               continue;
             }
 
             if (isAlreadyFalling) {
-              // Rock was falling from above -> crushes player!
               gameState = 'dead';
               playDeathSound();
               showMessage('ROZDRCEN! 💀', 'lose');
               return;
             } else {
-              // Rock resting on player: player supports it safely on their head
               continue;
             }
           }
 
-          // Rock falls into empty space
-          grid[y + 1][x] = ROCK;
+          // Check if falling onto a monster -> SQUASH IT!
+          if (monsterBelowIdx !== -1 && isAlreadyFalling) {
+            monsters.splice(monsterBelowIdx, 1);
+            playMonsterSquishSound();
+            createEggCrackEffect(x, y + 1);
+            grid[y][x] = EMPTY;
+            grid[y + 1][x] = DIAMOND; // Classic reward: monster turns into diamond
+            totalDiamonds++;
+            document.getElementById('total').textContent = totalDiamonds;
+            continue;
+          }
+
+          // Item falls into empty space
+          grid[y + 1][x] = item;
           grid[y][x] = EMPTY;
           newFalling.add(`${x},${y + 1}`);
           continue;
         }
 
-        // Slide off another rock or diamond
-        if (below === ROCK || below === DIAMOND) {
+        // Slide off another rock, diamond, or egg
+        if (below === ROCK || below === DIAMOND || below === EGG) {
           // Slide left
           if (x > 0 && grid[y][x - 1] === EMPTY && grid[y + 1][x - 1] === EMPTY) {
             const playerBlocked = (player.x === x - 1 && player.y === y) ||
@@ -801,7 +1426,7 @@ function doPhysics() {
               (player.x === x - 1 && player.y === y + 1) ||
               (player.isMoving && player.targetX === x - 1 && player.targetY === y + 1);
             if (!playerBlocked) {
-              grid[y][x - 1] = ROCK;
+              grid[y][x - 1] = item;
               grid[y][x] = EMPTY;
               newFalling.add(`${x - 1},${y}`);
               continue;
@@ -814,7 +1439,7 @@ function doPhysics() {
               (player.x === x + 1 && player.y === y + 1) ||
               (player.isMoving && player.targetX === x + 1 && player.targetY === y + 1);
             if (!playerBlocked) {
-              grid[y][x + 1] = ROCK;
+              grid[y][x + 1] = item;
               grid[y][x] = EMPTY;
               newFalling.add(`${x + 1},${y}`);
               continue;
@@ -822,7 +1447,7 @@ function doPhysics() {
           }
         }
 
-        // Slide off rounded wall (Top-Left): stone rolls LEFT
+        // Slide off rounded wall (Top-Left): rolls LEFT
         if (below === WALL_TL) {
           if (x > 0 && grid[y][x - 1] === EMPTY && grid[y + 1][x - 1] === EMPTY) {
             const playerBlocked = (player.x === x - 1 && player.y === y) ||
@@ -830,7 +1455,7 @@ function doPhysics() {
               (player.x === x - 1 && player.y === y + 1) ||
               (player.isMoving && player.targetX === x - 1 && player.targetY === y + 1);
             if (!playerBlocked) {
-              grid[y][x - 1] = ROCK;
+              grid[y][x - 1] = item;
               grid[y][x] = EMPTY;
               newFalling.add(`${x - 1},${y}`);
               continue;
@@ -838,7 +1463,7 @@ function doPhysics() {
           }
         }
 
-        // Slide off rounded wall (Top-Right): stone rolls RIGHT
+        // Slide off rounded wall (Top-Right): rolls RIGHT
         if (below === WALL_TR) {
           if (x + 1 < MAP_W && grid[y][x + 1] === EMPTY && grid[y + 1][x + 1] === EMPTY) {
             const playerBlocked = (player.x === x + 1 && player.y === y) ||
@@ -846,7 +1471,7 @@ function doPhysics() {
               (player.x === x + 1 && player.y === y + 1) ||
               (player.isMoving && player.targetX === x + 1 && player.targetY === y + 1);
             if (!playerBlocked) {
-              grid[y][x + 1] = ROCK;
+              grid[y][x + 1] = item;
               grid[y][x] = EMPTY;
               newFalling.add(`${x + 1},${y}`);
               continue;
@@ -854,12 +1479,28 @@ function doPhysics() {
           }
         }
 
+        // Landed!
         if (isAlreadyFalling) {
           rockLanded = true;
+          // EGG HATCHES WHEN IT LANDS FROM A FALL!
+          if (item === EGG) {
+            grid[y][x] = EMPTY;
+            spawnMonster(x, y);
+            playEggCrackSound();
+            createEggCrackEffect(x, y);
+            continue;
+          }
         }
       } else {
         if (isAlreadyFalling) {
           rockLanded = true;
+          if (item === EGG) {
+            grid[y][x] = EMPTY;
+            spawnMonster(x, y);
+            playEggCrackSound();
+            createEggCrackEffect(x, y);
+            continue;
+          }
         }
       }
     }
@@ -937,6 +1578,13 @@ function tryGrab(dx, dy) {
     return true;
   }
 
+  if (target === KEY) {
+    grid[ny][nx] = EMPTY;
+    unlockSafes();
+    player.walkCycle += 1.8;
+    return true;
+  }
+
   return false;
 }
 
@@ -964,15 +1612,15 @@ function canMove(dx, dy) {
     return { canMove: false };
   }
 
-  if (target === ROCK) {
-    if (dy !== 0) return { canMove: false }; // can't push rock vertically
-    if (fallingRocks.size > 0) return { canMove: false }; // can't push while rocks are falling
-    // Can't push a rock that has an empty gap below it (it must fall, cannot float!)
+  if (target === ROCK || target === EGG) {
+    if (dy !== 0) return { canMove: false }; // can't push vertically
+    if (fallingRocks.size > 0) return { canMove: false }; // can't push while objects are falling
+    // Can't push an object that has an empty gap below it (it must fall!)
     if (ny + 1 < MAP_H && grid[ny + 1][nx] === EMPTY) return { canMove: false };
     const bx = nx + dx;
     if (bx < 0 || bx >= MAP_W) return { canMove: false };
     if (grid[ny][bx] !== EMPTY) return { canMove: false };
-    return { canMove: true, isPush: true, bx, by: ny };
+    return { canMove: true, isPush: true, bx, by: ny, type: target };
   }
 
   return { canMove: true, isPush: false };
@@ -1005,13 +1653,14 @@ function startMove(dx, dy) {
     return false;
   }
 
-  // Under rock moving down -> crushed immediately!
-  const rockAbove = (player.y > 0 && grid[player.y - 1][player.x] === ROCK);
-  if (rockAbove && dy === 1) {
+  // Under rock or egg moving down -> crushed immediately!
+  const itemAbove = (player.y > 0 && (grid[player.y - 1][player.x] === ROCK || grid[player.y - 1][player.x] === EGG));
+  if (itemAbove && dy === 1) {
     const nx = player.x;
     const ny = player.y + 1;
+    const aboveType = grid[player.y - 1][player.x];
     grid[player.y - 1][player.x] = EMPTY;
-    grid[ny][nx] = ROCK;
+    grid[ny][nx] = aboveType;
     player.x = nx;
     player.y = ny;
     player.visualX = nx;
@@ -1033,7 +1682,8 @@ function startMove(dx, dy) {
       fromY: ny,
       toX: check.bx,
       toY: check.by,
-      progress: 0
+      progress: 0,
+      type: check.type || ROCK
     };
     grid[ny][nx] = EMPTY;
     playPushSound();
@@ -1046,6 +1696,9 @@ function startMove(dx, dy) {
     if (score >= totalDiamonds && gameState === 'playing') {
       triggerWin();
     }
+  } else if (target === KEY) {
+    grid[ny][nx] = EMPTY;
+    unlockSafes();
   } else if (target === EARTH) {
     grid[ny][nx] = EMPTY;
     playStepSound(true);
@@ -1090,17 +1743,18 @@ function updatePlayer(dt) {
       if (pushedRock) {
         const rx = pushedRock.toX;
         const ry = pushedRock.toY;
-        grid[ry][rx] = ROCK;
+        const pushedType = pushedRock.type || ROCK;
+        grid[ry][rx] = pushedType;
         pushedRock = null;
 
-        // Rock pushed over gap must fall immediately
+        // Rock or egg pushed over gap must fall immediately
         if (ry + 1 < MAP_H && grid[ry + 1][rx] === EMPTY) {
           fallingRocks.add(`${rx},${ry}`);
           doPhysics();
           return;
         }
-        // Pushed onto another rock, diamond or rounded wall -> check roll
-        if (ry + 1 < MAP_H && (grid[ry + 1][rx] === ROCK || grid[ry + 1][rx] === DIAMOND || grid[ry + 1][rx] === WALL_TL || grid[ry + 1][rx] === WALL_TR)) {
+        // Pushed onto another rock, diamond, egg or rounded wall -> check roll
+        if (ry + 1 < MAP_H && (grid[ry + 1][rx] === ROCK || grid[ry + 1][rx] === DIAMOND || grid[ry + 1][rx] === EGG || grid[ry + 1][rx] === WALL_TL || grid[ry + 1][rx] === WALL_TR)) {
           doPhysics();
           if (fallingRocks.size > 0) {
             return;
@@ -1249,7 +1903,7 @@ function loadLevel(index) {
       } else {
         grid[y][x] = CHAR_MAP[ch] !== undefined ? CHAR_MAP[ch] : WALL;
       }
-      if (ch === 'D') totalDiamonds++;
+      if (ch === 'D' || ch === 'B') totalDiamonds++;
     }
   }
 
@@ -1267,6 +1921,8 @@ function loadLevel(index) {
   pushedRock = null;
   fallingRocks.clear();
   physicsTimer = 0;
+  monsters = [];
+  eggCrackParticles = [];
 
   activeKeys = [];
   bufferedDir = null;
@@ -1485,6 +2141,7 @@ function gameLoop(timestamp) {
     }
 
     updatePlayer(dt);
+    updateMonsters(dt);
   }
 
   render();
