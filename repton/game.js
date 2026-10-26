@@ -25,6 +25,7 @@ let pushedRock = null; // { fromX, fromY, toX, toY, progress, type }
 const fallingRocks = new Set(); // tracks rocks and eggs currently mid-fall: "x,y"
 let physicsTimer = 0;
 let monsters = []; // active monsters hatched from eggs
+let hatchingEggs = []; // eggs currently hatching: { x, y, timeLeft, totalTime }
 let eggCrackParticles = []; // visual particles when egg hatches
 
 let score = 0;
@@ -35,6 +36,7 @@ let moveCount = 0;
 // Speed constants (in seconds)
 const MOVE_DURATION = 0.135;    // ~135ms per tile step (~7.4 tiles/sec, fluid & responsive)
 const PHYSICS_INTERVAL = 0.055; // ~55ms per tile: rocks fall fast and heavy (~18 tiles/sec)
+const EGG_HATCH_DELAY = 1.5;    // 1.5s delay between egg cracking and monster emergence
 
 // ===== CANVAS & CAMERA SETUP =====
 const canvas = document.getElementById('game');
@@ -515,6 +517,98 @@ function drawEgg(px, py, s) {
   ctx.restore();
 }
 
+// 8b-2. Hatching Egg (Cracking open during the 1.5s delay)
+function drawHatchingEgg(px, py, s, he) {
+  const cx = px + s / 2;
+  const cy = py + s / 2 + s * 0.04;
+  const rx = s * 0.33;
+  const ry = s * 0.41;
+  const progress = Math.max(0, Math.min(1, 1 - (he.timeLeft / he.totalTime))); // 0.0 -> 1.0
+
+  // Trembling / shaking increases as hatch moment nears
+  const shakeIntensity = 0.5 + progress * 2.5;
+  const shakeX = (Math.sin(performance.now() * 0.045) + Math.cos(performance.now() * 0.07)) * (s * 0.015 * shakeIntensity);
+  const shakeY = Math.cos(performance.now() * 0.05) * (s * 0.01 * shakeIntensity);
+
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
+
+  // Drop shadow
+  ctx.beginPath();
+  ctx.ellipse(cx, py + s * 0.86, rx * 0.85, s * 0.08, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.fill();
+
+  // Egg shell shape
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - ry);
+  ctx.bezierCurveTo(cx + rx * 0.9, cy - ry * 0.85, cx + rx * 1.15, cy + ry * 0.35, cx + rx * 0.8, cy + ry * 0.85);
+  ctx.bezierCurveTo(cx + rx * 0.5, cy + ry * 1.05, cx - rx * 0.5, cy + ry * 1.05, cx - rx * 0.8, cy + ry * 0.85);
+  ctx.bezierCurveTo(cx - rx * 1.15, cy + ry * 0.35, cx - rx * 0.9, cy - ry * 0.85, cx, cy - ry);
+  ctx.closePath();
+
+  const grad = ctx.createRadialGradient(
+    cx - rx * 0.35, cy - ry * 0.35, rx * 0.1,
+    cx, cy, ry * 1.1
+  );
+  grad.addColorStop(0, '#FFFFFF');
+  grad.addColorStop(0.35, '#F7F6EE');
+  grad.addColorStop(0.7, '#DED6C4');
+  grad.addColorStop(1, '#968C76');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.strokeStyle = '#5E5440';
+  ctx.lineWidth = Math.max(1, s * 0.035);
+  ctx.stroke();
+
+  // Widening jagged fissure cracks
+  const crackWidth = Math.max(1.5, s * (0.04 + progress * 0.08));
+  ctx.strokeStyle = '#1A0033'; // Alien darkness inside
+  ctx.lineWidth = crackWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'miter';
+
+  ctx.beginPath();
+  ctx.moveTo(cx - rx * 0.8, cy + ry * 0.1);
+  ctx.lineTo(cx - rx * 0.35, cy - ry * 0.1);
+  ctx.lineTo(cx - rx * 0.05, cy + ry * 0.15);
+  ctx.lineTo(cx + rx * 0.35, cy - ry * 0.05);
+  ctx.lineTo(cx + rx * 0.75, cy + ry * 0.2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(cx - rx * 0.05, cy + ry * 0.15);
+  ctx.lineTo(cx + rx * 0.08, cy + ry * 0.55);
+  ctx.stroke();
+
+  // Alien glowing eyes peeking out from the opening crack
+  if (progress > 0.25) {
+    const eyeAlpha = Math.min(1.0, (progress - 0.25) * 2.0);
+    ctx.fillStyle = `rgba(255, 234, 0, ${eyeAlpha})`;
+    const eyeSize = Math.max(1.5, s * (0.04 + progress * 0.03));
+    // Left eye
+    ctx.beginPath();
+    ctx.arc(cx - rx * 0.22, cy - ry * 0.02, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+    // Right eye
+    ctx.beginPath();
+    ctx.arc(cx + rx * 0.15, cy + ry * 0.04, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Red pupil
+    ctx.fillStyle = `rgba(213, 0, 0, ${eyeAlpha})`;
+    ctx.beginPath();
+    ctx.arc(cx - rx * 0.22, cy - ry * 0.02, eyeSize * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + rx * 0.15, cy + ry * 0.04, eyeSize * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 // 8c. Enemy / Monster
 function drawMonster(px, py, s, monster) {
   const cx = px + s / 2;
@@ -956,6 +1050,13 @@ function render() {
     }
   }
 
+  // Render hatching eggs (cracking open during the 1.5s delay)
+  for (const he of hatchingEggs) {
+    const hpx = (he.x - cameraX) * TILE_SIZE;
+    const hpy = (he.y - cameraY) * TILE_SIZE;
+    drawHatchingEgg(hpx, hpy, TILE_SIZE, he);
+  }
+
   // Render active monsters
   for (const m of monsters) {
     const mpx = (m.visualX - cameraX) * TILE_SIZE;
@@ -1354,6 +1455,43 @@ function updateMonsters(dt) {
   }
 }
 
+function updateHatchingEggs(dt) {
+  if (gameState !== 'playing') return;
+
+  for (let i = hatchingEggs.length - 1; i >= 0; i--) {
+    const he = hatchingEggs[i];
+    he.timeLeft -= dt;
+
+    // Small ambient cracking particles during the 1.5s gestation
+    if (Math.random() < 0.15) {
+      eggCrackParticles.push({
+        x: he.x + 0.3 + Math.random() * 0.4,
+        y: he.y + 0.4 + Math.random() * 0.4,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: -Math.random() * 1.8,
+        size: 1.5 + Math.random() * 2,
+        color: Math.random() > 0.5 ? '#FFFFFF' : '#E8E4D8',
+        life: 0.35
+      });
+    }
+
+    if (he.timeLeft <= 0) {
+      const hx = he.x;
+      const hy = he.y;
+      hatchingEggs.splice(i, 1);
+      spawnMonster(hx, hy);
+      createEggCrackEffect(hx, hy);
+
+      // If player is on the same tile when the monster bursts out:
+      if (player.x === hx && player.y === hy) {
+        gameState = 'dead';
+        playDeathSound();
+        showMessage('ROZTRHÁN PŘÍŠEROU! 👾', 'lose');
+      }
+    }
+  }
+}
+
 // ===== PHYSICS ENGINE =====
 function doPhysics() {
   if (gameState !== 'playing') return;
@@ -1372,7 +1510,10 @@ function doPhysics() {
 
       if (y + 1 < MAP_H) {
         const below = grid[y + 1][x];
-        const monsterBelowIdx = monsters.findIndex(m => m.x === x && m.y === y + 1);
+        const monsterBelowIdx = monsters.findIndex(m =>
+          (m.x === x && m.y === y + 1) ||
+          (m.isMoving && m.targetX === x && m.targetY === y + 1)
+        );
 
         if (below === EMPTY) {
           // Check if player is directly underneath this rock/egg
@@ -1398,13 +1539,26 @@ function doPhysics() {
             }
           }
 
-          // Check if falling onto a monster -> SQUASH IT!
+          // Check if falling onto a monster (including moving monsters) -> SQUASH IT!
           if (monsterBelowIdx !== -1 && isAlreadyFalling) {
             monsters.splice(monsterBelowIdx, 1);
             playMonsterSquishSound();
             createEggCrackEffect(x, y + 1);
             grid[y][x] = EMPTY;
             grid[y + 1][x] = DIAMOND; // Classic reward: monster turns into diamond
+            totalDiamonds++;
+            document.getElementById('total').textContent = totalDiamonds;
+            continue;
+          }
+
+          // Check if falling onto an egg currently hatching -> SQUASH IT!
+          const hatchingBelowIdx = hatchingEggs.findIndex(he => he.x === x && he.y === y + 1);
+          if (hatchingBelowIdx !== -1 && isAlreadyFalling) {
+            hatchingEggs.splice(hatchingBelowIdx, 1);
+            playMonsterSquishSound();
+            createEggCrackEffect(x, y + 1);
+            grid[y][x] = EMPTY;
+            grid[y + 1][x] = DIAMOND;
             totalDiamonds++;
             document.getElementById('total').textContent = totalDiamonds;
             continue;
@@ -1482,12 +1636,12 @@ function doPhysics() {
         // Landed!
         if (isAlreadyFalling) {
           rockLanded = true;
-          // EGG HATCHES WHEN IT LANDS FROM A FALL!
+          // EGG CRACKS AND HATCHES AFTER 1.5s DELAY!
           if (item === EGG) {
             grid[y][x] = EMPTY;
-            spawnMonster(x, y);
             playEggCrackSound();
             createEggCrackEffect(x, y);
+            hatchingEggs.push({ x, y, timeLeft: EGG_HATCH_DELAY, totalTime: EGG_HATCH_DELAY });
             continue;
           }
         }
@@ -1496,9 +1650,9 @@ function doPhysics() {
           rockLanded = true;
           if (item === EGG) {
             grid[y][x] = EMPTY;
-            spawnMonster(x, y);
             playEggCrackSound();
             createEggCrackEffect(x, y);
+            hatchingEggs.push({ x, y, timeLeft: EGG_HATCH_DELAY, totalTime: EGG_HATCH_DELAY });
             continue;
           }
         }
@@ -1922,6 +2076,7 @@ function loadLevel(index) {
   fallingRocks.clear();
   physicsTimer = 0;
   monsters = [];
+  hatchingEggs = [];
   eggCrackParticles = [];
 
   activeKeys = [];
@@ -2142,6 +2297,7 @@ function gameLoop(timestamp) {
 
     updatePlayer(dt);
     updateMonsters(dt);
+    updateHatchingEggs(dt);
   }
 
   render();

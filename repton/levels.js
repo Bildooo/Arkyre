@@ -96,22 +96,22 @@ const LEVELS = [
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0 - Horní zeď
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0 - Horní zeď
       'WWWWWWWWWWZZZZZZRZZZDZZZZZWWWWWWWWWW', //  0 - Horní zeď
-      'WWWWWWWZZZZZZWWZ12ZZZZZZZZZZZWWWWWWW', //  0 - Horní zeď
-      'WWWWWZZZZZWZZWWWWWZZZZZDZZZZZZZWWWWW', //  0 - Horní zeď
-      'WWWWZZZZZWWWZWWWZZZWWZZZZZDZZZZZWWWW', //  0 - Horní zeď
-      'WWWWZZPZWWWWZWWZZZZWWZZZZZZZZZZZWWWW', //  0 - Horní zeď
-      'WWWZZZZZZZZWZWWZZZZZZWWZZZZZDZZZZWWW', //  0 - Horní zeď
-      'WWWZZZZZZZWRZWWWWZZZZWWZWWZZZZZZZWWW', //  0 - Horní zeď
-      'WWWZZZZZZWW2ZZZWWWZZZZZWWWWZZZZZDWWW', //  0 - Horní zeď
-      'WWZZZZZZWZWWWWZDWWWZZZZWWWWZZZZZZZWw', //  0 - Horní zeď
-      'WWZR12ZWZZZWW4ZZZWWZZZZZ34Z4ZZZZZZWW', //  0 - Horní zeď
-      'WWZRWWZWZZZWW4ZZZWWZZZZZ34Z12ZZZZZWW', //  0 - Horní zeď
-      'WWZZWWWDZZZ34ZZZZ34ZZDZZZZZ34ZDWWWWW', //  0 - Horní zeď
+      'WWWWWWWZZZZZZ12Z12ZZZZZZZZZZZWWWWWWW', //  0 - Horní zeď
+      'WWWWWZZZZZWZZWWW34ZZZZZDZZZZZZZWWWWW', //  0 - Horní zeď
+      'WWWWZZZZZWWWZWWWZZZ12ZZZZZDZZZZZWWWW', //  0 - Horní zeď
+      'WWWWZZPZWWWWZWWZZZZ34ZZZZZZZZZZZWWWW', //  0 - Horní zeď
+      'WWWZZZZZZZZWZWWZZZZZZ12ZZZZZDZZZZWWW', //  0 - Horní zeď
+      'WWWZZZZZZZWRZWW12ZZZZ34Z12ZZZZZZZWWW', //  0 - Horní zeď
+      'WWWZZZZZZW12ZZZWW2ZZZZZ1WW2ZZZZZDWWW', //  0 - Horní zeď
+      'WWZZZZZZWZ3WW2ZD1W2ZZZZ3WW4ZZZZZZZWW', //  0 - Horní zeď
+      'WWZR12ZWZZZ3W4ZZWW4ZZZZZ34Z12ZZZZZWW', //  0 - Horní zeď
+      'WWZRWWZWZZZ34ZZZ34ZZZZZZZZZ34ZZZZZWW', //  0 - Horní zeď
+      'WWZZWWWDZZZZZZZZZZZZZDZZZZZZZZDWWWWW', //  0 - Horní zeď
       'WW2Z34ZWZZZZZZZZZZZWZZZZZ12ZZZZ3WWWW', //  0 - Horní zeď
       'WW4ZZZZZWZZZZZ12ZZ1W2ZZZZ34ZZZZR..WW', //  0 - Horní zeď
       'WWZZZZZZZZZZZDWW2ZWW4ZZZZZWZZZ1W2.WW', //  0 - Horní zeď
-      'WWDZ12ZZ12ZZ1WDW4DWWZZZZZZWWZZWWW.WW', //  0 - Horní zeď
-      'WWWWWWWWWWWWWWZZZWWWZWWZZ1WWWWD...WW', //  0 - Horní zeď
+      'WWDZ12ZZ12ZZ1WD34DWWZZZZZZWWZZ3W4.WW', //  0 - Horní zeď
+      'WWWWWWWWWWWWWWZZZWWWZ12ZZ1WWWWD...WW', //  0 - Horní zeď
       'WWWWDZ34ZZ34ZZZZZ3W4Z34ZZW4D34...1WW', //  0 - Horní zeď
       'WWZZZZZZZZZZZZZZZZZZZZZWW4ZZZ...1WWW', //  0 - Horní zeď
       'WWZZZZZRZZZZZZRRRRRRZZZW4ZZZ...1WWWW', //  0 - Horní zeď
@@ -119,14 +119,14 @@ const LEVELS = [
       'WWZZRZZZZZZZZZZZZZZZRZZWZZ...14..DWW', //  0 - Horní zeď
       'WWZZZZZRZZZZZZZWWWWWWWZWDZ..14ZZZZWW', //  0 - Horní zeď
       'WWZZZZZZZZWWWWWRWWWWWRWWZ..14ZZZZZWW', //  0 - Horní zeď
-      'WWDZZZZZZZZWRWZZZZZZZZDWZ.1W..WW..WW', //  0 - Horní zeď
+      'WWDZZZZZZZZWRWZZZZZZZZDWZ.12..12..WW', //  0 - Horní zeď
       'WWWWWWWWWWZZZZZWZZZZZZZWZ.34D.34.WWW', //  0 - Horní zeď
       'WWWZZDZZZWWWWWWWZZZZZZZWZ...12...WWW', //  0 - Horní zeď
       'WWWZZZZZZZWWWWWWRZZZZWWZZ...34...WWW', //  0 - Horní zeď
       'WWWWZZZZWZZWRWZZZZZZWZZZZ.......WWWW', //  0 - Horní zeď
       'WWWWDZZZWZZZZZZWZZZWZZZZZ.......WWWW', //  0 - Horní zeď      
       'WWWWWZZZWZWWWWWWWWWZZZZ12.12...WWWWW', //  0 - Horní zeď
-      'WWWWWWWZZZZWRWZZZZZZZZZWW.WW.WWWWWWW', //  0 - Horní zeď
+      'WWWWWWWZZZZWRWZZZZZZZZZ34.34.WWWWWWW', //  0 - Horní zeď
       'WWWWWWWWWWZZZZZ12ZZZZZZWWDWWWWWWWWWW', //  0 - Horní zeď
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0 - Horní zeď
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0 - Horní zeď
@@ -219,6 +219,85 @@ const LEVELS = [
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // 34
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW'  // 35
     ]
+  },
+  {
+    id: 6,
+    name: "6. Tim Tyler (36x36)",
+    width: 36,
+    height: 36,
+    map: [
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  1
+      'WW................................WW', //  2
+      'WW................................WW', //  3
+      'WW.........DDDDD.DDD.D...D........WW', //  4 - TIM v diamantech D
+      'WW...........D....D..DD.DD........WW', //  5
+      'WW....P......D....D..DDDDD........WW', //  6 - Hráč P na (6, 6)
+      'WW...........D....D..D.D.D........WW', //  7
+      'WW...........D...DDD.D...D........WW', //  8
+      'WW................................WW', //  9
+      'WW.......ZZZ.Z.Z.Z...ZZZ.ZZ.......WW', // 10 - TYLER v hlíně Z
+      'WW........Z..Z.Z.Z...Z...Z.Z......WW', // 11
+      'WW........Z..ZZZ.Z...ZZ..ZZ.......WW', // 12
+      'WW........Z...Z..Z...Z...Z.Z......WW', // 13
+      'WW........Z...Z..ZZZ.ZZZ.Z.Z......WW', // 14
+      'WW................................WW', // 15
+      'WW......................WW........WW', // 16
+      'WWW.W...WWW......W.W...WWW.W.W.W..WW', // 17
+      'WWW.W.WWWDWW..W..W.W..WWD..W.W.W..WW', // 18
+      'WWZZWWWBZZZWWWWWWWZZWWZZWWWZWZRZWWWW', // 19 - Sejf B na (7, 19), Kámen R na (30, 19)
+      'WWZZWDWWW.OZZZZZWZZZZZZZZWWZZZZZZZWW', // 20 - Vejce O na (10, 20)
+      'WWZZWZZRW.WW....W.W.W.W..WW.......WW', // 21 - Kámen R na (7, 21)
+      'WWZZWZZZWWW.....W.WBW.W..WW..D....WW', // 22 - Sejf B na (19, 22)
+      'WWZWWWWZW.......W.WWW.W...DWW.....WW', // 23
+      'WWZWZZZZW.......W.....WWWWWWW..O..WW', // 24 - Vejce O na (31, 24)
+      'WWZWZWZWW.......WWW...WB...DWWWB..WW', // 25 - Sejfy B na (23, 25) a (31, 25)
+      'WWZZZWWW........WDWWD.W......WW.D.WW', // 26
+      'WWZWZWZZ........W.WWWWW.....WW....WW', // 27
+      'WWZWZWZZ........W.W.........WW....WW', // 28
+      'WWZWZWZZ..........W........WW.....WW', // 29
+      'WWZWZBZWRWW..W...WW.R......WW...D.WW', // 30 - Sejf B na (5, 30), Kameny R na (8, 30) a (20, 30)
+      'WWZWZWZWZZZZZWZWWWWWZZZZZWW.......WW', // 31
+      'WWZWZWWWZWZWZWZZWRWZZWZZZWW.......WW', // 32 - Kámen R na (17, 32)
+      'WWZZZZZZZWZZZWWZZZZZWWZZZKB.......WW', // 33 - Klíč K na (25, 33), Sejf B na (26, 33)
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // 34
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW'  // 35
+    ]
+  },
+  {
+    id: 7,
+    name: "7. Chrám dvou světů (28x26)",
+    width: 28,
+    height: 26,
+    map: [
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWW', //  0
+      'W..R.......WWWWWW.......D.W', //  1
+      'W.DDD.D...WWWWWWWW......D.W', //  2
+      'W..P.....WWWWWWWWWW.......W', //  3
+      'W........WWWWWKWWWW.......W', //  4
+      'WWWW.R..BBBBWWWWBBBB.....WW', //  5
+      'W.D.....BDDWWWWWWDDB....R.W', //  6
+      'W.R.D....WWWWWWWWWW.....D.W', //  7
+      'W........WWWWWWWWWW.......W', //  8
+      'W...D.....WWWWWWWW........W', //  9
+      'W.........DDD.D..........DW', // 10
+      'W..........DDD...........DW', // 11
+      'W..D.......D.D...........DW', // 12
+      'W.........GGGGGG.........DW', // 13
+      'W........GGGGGGGGG........W', // 14
+      'W.......ZZZGGGZZZZWWW.....W', // 15
+      'W......ZZZZGGZZZZZZWWW..D.W', // 16
+      'WW....ZZZZGGGZZZZZZZ......W', // 17
+      'WW...ZZDDZZGZZZZZZZZZ.D..WW', // 18
+      'WBBZZZZZZZGZZZZZZD.ZZZBBRWW', // 19
+      'WZZZZZZZZZZZZZZDZZZZZZZZZZW', // 20
+      'WZZZZZZZZZZZZZZZZZZZZZZZZRW', // 21
+      'WZZZZDZZZZWWWWZZDZZZZZDZZZW', // 22
+      'WZZZZZZZZWWWWWWZZZZZZZZOZZW', // 23
+      'WZZZZZDZZZZWWZZZZZDZZZZDZZW', // 24
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWW'  // 25
+    ]
   }
 ];
+
 
